@@ -2,6 +2,10 @@
 
 NEXUS is a hardware-first student productivity and wellness wearable built around an ESP32, a 128×64 monochrome OLED, an MPU6050 motion sensor, and a MAX3010x optical heart-rate sensor. Its companion Flutter app, **Uncpanion**, provides a larger view of live watch data and an app-local focus timer.
 
+## Live demo
+
+[Open the Uncpanion web demo](https://jovial-crostata-94d87f.netlify.app/). Demo Mode works without the watch or Web Bluetooth. Connecting the physical watch requires a Bluetooth-capable Chromium browser.
+
 ## Current status
 
 - ESP32 firmware compiles and has been uploaded to the connected watch.

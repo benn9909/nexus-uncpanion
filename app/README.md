@@ -2,6 +2,8 @@
 
 Flutter companion app for the NEXUS 2026 ESP32 wearable. This first increment implements the app interface and an independent app-local focus timer. The watch firmware now advertises a read-only BLE telemetry service.
 
+**Live demo:** [jovial-crostata-94d87f.netlify.app](https://jovial-crostata-94d87f.netlify.app/)
+
 ## Run
 
 Install the stable Flutter SDK using https://docs.flutter.dev/install/manual, then from this folder:
