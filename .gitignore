@@ -1,0 +1,25 @@
+# macOS and editor files
+.DS_Store
+.idea/
+*.iml
+
+# Local snapshots retained outside version control
+backups/
+
+# Flutter and Dart generated files
+app/.dart_tool/
+app/.flutter-plugins-dependencies
+app/.packages
+app/.pub-cache/
+app/.pub/
+app/build/
+
+# Platform-local configuration and generated dependencies
+app/android/local.properties
+app/android/.gradle/
+app/ios/Pods/
+app/ios/.symlinks/
+app/ios/Flutter/ephemeral/
+app/ios/Flutter/Generated.xcconfig
+app/ios/Flutter/flutter_export_environment.sh
+
