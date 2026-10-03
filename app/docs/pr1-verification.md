@@ -14,7 +14,11 @@ The Add Task (Test) button remains a simulation with generated titles and deadli
 
 ## Verification status
 
-**Not run.** Tests were deferred at the user's request for the team meeting. No ESP upload or physical-device test was performed. The regression tests are prepared, not confirmed passing. Analysis and web build also remain pending.
+Tests and analysis remain deferred at the user's request for the team meeting. No ESP upload or physical-device test was performed. The regression tests are prepared, not confirmed passing.
+
+On 4 October 2026, `flutter build web` succeeded with Flutter 3.47.6 for the requested Netlify update. It emitted a non-fatal CupertinoIcons font warning. A successful build does not confirm the deferred tests or hardware behavior.
+
+Published to https://nexus-uncpanion.netlify.app/ using the existing site's manual deploy flow. Netlify deployment: `6ac13ad69615910cb41b3aa9`. The public index loaded successfully, and the public `main.dart.js` SHA-256 matched the local build: `beea6697f6c0e52719f65973928b22feca7c992a96f4fc35597ab8869b09ac4b`. Source revision: `8f8f2ae`. This deployment did not merge or push the GitHub PR.
 
 ## Automated checks
 
