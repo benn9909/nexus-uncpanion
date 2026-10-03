@@ -23,11 +23,11 @@ flutter build web
 
 Run `flutter build web`, then upload the contents of `build/web` using Netlify's manual deploy interface. The app uses a single root URL and keeps tab navigation in memory, so refreshing the deployed site does not require rewrite rules. No `netlify.toml`, backend, environment variables, or build plugin is required.
 
-The public build starts with Demo Mode enabled. Health and Activity remain interactive without Bluetooth, including in browsers that do not expose Web Bluetooth. A real watch can still be connected from Device in a compatible browser; live BLE data takes precedence while connected.
+The public build starts with Demo Mode enabled. Health and Activity remain interactive without Bluetooth, including in browsers that do not expose Web Bluetooth. A real watch can still be connected from Device in a compatible browser; live BLE data takes precedence while connected. Device and Health share one Demo Mode preference for both sensor tabs. The switch is disabled while connected; disconnecting restores the saved demo preference.
 
 ## Implemented
 
-- Home: animated/blinking Unc, tap-to-talk encouragement, focus summary.
+- Home: animated/blinking Unc, tap-to-talk encouragement, focus summary, and test reminders with an overload prompt and ten-second breathing exercise. Reminder titles/deadlines are generated examples and stay in memory.
 - Focus: 1–8 sessions, real 25/5/15-minute durations, pause/resume, phase catch-up after suspension, completion records for the current app run.
 - Health: explicitly labeled Demo Mode optical pulse and day/week charts; toggle example data off to inspect the empty state.
 - Activity: example movement patterns and rotating break suggestions.
@@ -60,12 +60,12 @@ Built with AI development assistance and Flutter's open-source framework. Team m
 
 ## This Mac
 
-A temporary SDK was installed at `/private/tmp/nexus-flutter-sdk` (Flutter 3.47.3 / Dart 3.13.3). `./tool/run-preview.sh` uses Flutter from PATH or this temporary SDK. The temporary folder may be cleaned by macOS; install the SDK permanently before relying on it long-term.
+Flutter 3.47.6 is installed permanently at `~/development/flutter`. `./tool/run-preview.sh` finds this installation and falls back to native Git if an incompatible Git shadows it.
 
-Android SDK and full Xcode were not found during setup. Native builds have not been validated. Flutter also flagged the existing Java installation as incompatible with the generated Gradle version; Android setup will need a compatible JDK (17–25). No system Java settings were changed.
+Xcode 27.0 is installed. An iOS release was signed, installed, and opened on the owner's iPhone. See [iPhone setup](docs/ios-device-setup.md). Android tooling and Android builds remain unverified.
 
 ## BLE validation
 
-Firmware compiled and uploaded with ESP32 core 3.3.3. Flutter analysis and ten tests pass, including packet validation, expiry, disconnect, failed connection, and unsupported-browser behavior. Live hardware connection verification is reported separately in the task. Native Android/iOS builds remain unverified.
+Firmware compiled and uploaded with ESP32 core 3.3.3. Flutter analysis and eighteen tests pass, including packet validation, expiry, disconnect, failed connection, and unsupported-browser behavior. Live hardware connection verification is reported separately in the task. Native iOS BLE behavior remains unverified without the ESP; Android builds remain unverified.
 
-The current production preview is served at http://127.0.0.1:8083/. The in-app browser previously connected and displayed live watch focus, changing acceleration, inactivity, and no-finger heart-rate status. The reconnect flow was subsequently fixed and physically verified.
+The public preview is https://nexus-uncpanion.netlify.app/. The in-app browser previously connected and displayed live watch focus, changing acceleration, inactivity, and no-finger heart-rate status. The reconnect flow was subsequently fixed and physically verified.

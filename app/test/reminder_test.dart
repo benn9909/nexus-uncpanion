@@ -61,7 +61,11 @@ void main() {
 
   Future<void> addTask(WidgetTester tester) async {
     final button = find.text('Add Task (Test)');
-    await tester.ensureVisible(button);
+    await tester.scrollUntilVisible(
+      button,
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     // Home's avatar animates continuously, so do not pumpAndSettle.
     await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(button);
@@ -124,4 +128,37 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     expect(tester.takeException(), isNull);
   });
+  testWidgets(
+    'reminder and breathing dialogs fit a narrow phone with large text',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 740);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final state = AppState(autoTick: false);
+      addTearDown(state.dispose);
+      for (var i = 0; i < 4; i++) {
+        state.addReminder(
+          'Task $i',
+          DateTime.now().add(const Duration(days: 2)),
+        );
+      }
+      await showHome(tester, state);
+      await addTask(tester);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.text('Breathe with Unc'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Breathing with Unc'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byType(BreathingDialog), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 }

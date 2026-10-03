@@ -31,6 +31,8 @@ void main() {
     await tester.tap(find.text('Hide example'));
     await tester.pump();
     expect(find.text('NO DEVICE DATA'), findsOneWidget);
+    await tester.tap(find.text('Show example'));
+    await tester.pump();
     await tester.tap(find.text('Activity').last);
     await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text('Another break idea'));

@@ -14,7 +14,7 @@ The Add Task (Test) button remains a simulation with generated titles and deadli
 
 ## Verification status
 
-Tests and analysis remain deferred at the user's request for the team meeting. No ESP upload or physical-device test was performed. The regression tests are prepared, not confirmed passing.
+**4 October 2026:** all 18 Flutter tests pass; `flutter analyze` reports no issues. Coverage includes reminder completion/deadlines, threshold-crossing prompts, breathing reversals, early dismissal, narrow dialogs with enlarged text, shared Demo Mode without Web Bluetooth, live-data precedence and return to demo after a mocked disconnect. No ESP upload or live sensor test was performed.
 
 On 4 October 2026, `flutter build web` succeeded with Flutter 3.47.6 for the requested Netlify update. It emitted a non-fatal CupertinoIcons font warning. A successful build does not confirm the deferred tests or hardware behavior.
 
@@ -44,7 +44,7 @@ The PATH command also prioritizes macOS's native Git because this Mac has an inc
 2. Reach five unfinished tasks. Dismiss the alert, then add another task: no repeat alert should appear.
 3. Drop below five unfinished tasks and add a task to cross the threshold again. Choose Breathe with Unc. Check inhale accompanies growth and exhale accompanies shrinking, switching every 2.5 seconds. Check completion at ten seconds and closing early.
 4. Read the Focus help. Start, pause, resume and reset the standard app timer.
-5. Check Home and the breathing dialog at phone width and enlarged text. Visual verification is pending.
+5. Check Home and the breathing dialog at phone width and enlarged text. Narrow-screen and enlarged-text widget checks pass; desktop browser spot-checks were also performed.
 6. With the ESP32 present, connect from Device. Check live heart rate, motion and watch focus telemetry, then disconnect/reconnect and check Demo Mode.
 
-Record results after running the checks; leave the fixes unmerged until verification is complete.
+ESP/BLE checks still require the physical watch. The PR is left unmerged for team review.

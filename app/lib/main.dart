@@ -73,14 +73,15 @@ class UncpanionApp extends StatelessWidget {
 }
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key});
+  const AppShell({super.key, this.watch});
+  final WatchController? watch;
   @override
   State<AppShell> createState() => _AppShellState();
 }
 
 class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   final state = AppState();
-  final watch = WatchController();
+  late final watch = widget.watch ?? WatchController();
   int tab = 0;
   bool demoMode = true;
   @override
@@ -98,7 +99,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     state.dispose();
-    watch.dispose();
+    if (widget.watch == null) watch.dispose();
     super.dispose();
   }
 
@@ -135,8 +136,16 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                 child: [
                   HomePage(state: state, watch: watch, navigate: navigate),
                   FocusPage(state: state, watch: watch),
-                  HealthPage(watch: watch),
-                  ActivityPage(watch: watch),
+                  HealthPage(
+                    watch: watch,
+                    demoMode: demoMode && !watch.connected,
+                    onDemoModeChanged: (value) =>
+                        setState(() => demoMode = value),
+                  ),
+                  ActivityPage(
+                    watch: watch,
+                    demoMode: demoMode && !watch.connected,
+                  ),
                   DevicePage(
                     watch: watch,
                     demoMode: demoMode && !watch.connected,
@@ -332,14 +341,17 @@ class _HomePageState extends State<HomePage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        scrollable: true,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Row(
           children: const [
             Icon(Icons.warning_amber_rounded, color: green),
             SizedBox(width: 8),
-            Text(
-              'Task Overload Alert',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Expanded(
+              child: Text(
+                'Task Overload Alert',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
@@ -512,24 +524,27 @@ class _HomePageState extends State<HomePage> {
                 ...widget.state.reminders.asMap().entries.map((entry) {
                   int idx = entry.key;
                   var r = entry.value;
-                  return CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      r.title,
-                      style: TextStyle(
-                        decoration: r.isDone
-                            ? TextDecoration.lineThrough
-                            : null,
-                        color: r.isDone ? muted : ink,
+                  return Material(
+                    type: MaterialType.transparency,
+                    child: CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        r.title,
+                        style: TextStyle(
+                          decoration: r.isDone
+                              ? TextDecoration.lineThrough
+                              : null,
+                          color: r.isDone ? muted : ink,
+                        ),
                       ),
+                      subtitle: Text(
+                        'Due: ${r.deadline.month}/${r.deadline.day}',
+                      ),
+                      value: r.isDone,
+                      onChanged: (bool? val) {
+                        widget.state.toggleReminder(idx);
+                      },
                     ),
-                    subtitle: Text(
-                      'Due: ${r.deadline.month}/${r.deadline.day}',
-                    ),
-                    value: r.isDone,
-                    onChanged: (bool? val) {
-                      widget.state.toggleReminder(idx);
-                    },
                   );
                 }).toList(),
               const SizedBox(height: 16),
@@ -860,7 +875,14 @@ class FocusPage extends StatelessWidget {
 }
 
 class HealthPage extends StatefulWidget {
-  const HealthPage({super.key, required this.watch});
+  const HealthPage({
+    super.key,
+    required this.watch,
+    required this.demoMode,
+    required this.onDemoModeChanged,
+  });
+  final bool demoMode;
+  final ValueChanged<bool> onDemoModeChanged;
   final WatchController watch;
   @override
   State<HealthPage> createState() => _HealthPageState();
@@ -868,9 +890,8 @@ class HealthPage extends StatefulWidget {
 
 class _HealthPageState extends State<HealthPage> {
   bool week = false;
-  bool showDemo = true;
   @override
-  Widget build(BuildContext context) => widget.watch.hasConnected
+  Widget build(BuildContext context) => widget.watch.connected
       ? LiveHealthPage(watch: widget.watch)
       : PageBody(
           children: [
@@ -883,12 +904,14 @@ class _HealthPageState extends State<HealthPage> {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Tag(
-                  showDemo ? 'DEMO DATA' : 'NO DEVICE DATA',
+                  widget.demoMode ? 'DEMO DATA' : 'NO DEVICE DATA',
                   color: const Color(0xFFF5E7CE),
                 ),
                 TextButton(
-                  onPressed: () => setState(() => showDemo = !showDemo),
-                  child: Text(showDemo ? 'Hide example' : 'Show example'),
+                  onPressed: () => widget.onDemoModeChanged(!widget.demoMode),
+                  child: Text(
+                    widget.demoMode ? 'Hide example' : 'Show example',
+                  ),
                 ),
               ],
             ),
@@ -916,7 +939,7 @@ class _HealthPageState extends State<HealthPage> {
                     textBaseline: TextBaseline.alphabetic,
                     children: [
                       Text(
-                        showDemo ? '71' : '—',
+                        widget.demoMode ? '71' : '—',
                         style: const TextStyle(
                           fontSize: 62,
                           fontWeight: FontWeight.w700,
@@ -928,7 +951,7 @@ class _HealthPageState extends State<HealthPage> {
                     ],
                   ),
                   Text(
-                    showDemo
+                    widget.demoMode
                         ? 'Illustrative reading · no live connection'
                         : 'Connect a compatible wearable to receive readings',
                     style: const TextStyle(color: muted, fontSize: 12),
@@ -939,7 +962,7 @@ class _HealthPageState extends State<HealthPage> {
                     width: double.infinity,
                     child: CustomPaint(
                       painter: TrendPainter(
-                        showDemo ? DemoData.pulse : [],
+                        widget.demoMode ? DemoData.pulse : [],
                         color: const Color(0xFFA76155),
                       ),
                     ),
@@ -977,7 +1000,7 @@ class _HealthPageState extends State<HealthPage> {
                     width: double.infinity,
                     child: CustomPaint(
                       painter: TrendPainter(
-                        showDemo
+                        widget.demoMode
                             ? (week
                                   ? DemoData.weeklyBpm
                                   : DemoData.pulse.sublist(0, 18))
@@ -1017,7 +1040,8 @@ class _HealthPageState extends State<HealthPage> {
 }
 
 class ActivityPage extends StatefulWidget {
-  const ActivityPage({super.key, required this.watch});
+  const ActivityPage({super.key, required this.watch, required this.demoMode});
+  final bool demoMode;
   final WatchController watch;
   @override
   State<ActivityPage> createState() => _ActivityPageState();
@@ -1032,7 +1056,8 @@ class _ActivityPageState extends State<ActivityPage> {
     'Refill your water, or enjoy a quiet pause.',
   ];
   @override
-  Widget build(BuildContext context) => widget.watch.hasConnected
+  Widget build(BuildContext context) =>
+      (widget.watch.connected || !widget.demoMode)
       ? LiveActivityPage(watch: widget.watch)
       : PageBody(
           children: [
@@ -1193,13 +1218,18 @@ class DevicePage extends StatelessWidget {
                   Text(
                     demoMode
                         ? 'Explore every tab without a physical watch.'
-                        : 'Connect a watch for live sensor readings.',
+                        : (watch.connected
+                              ? 'Live watch readings are active. Disconnect to use Demo Mode.'
+                              : 'Connect a watch for live sensor readings.'),
                     style: const TextStyle(color: muted),
                   ),
                 ],
               ),
             ),
-            Switch(value: demoMode, onChanged: onDemoModeChanged),
+            Switch(
+              value: demoMode,
+              onChanged: watch.connected ? null : onDemoModeChanged,
+            ),
           ],
         ),
       ),
@@ -1615,6 +1645,7 @@ class _BreathingDialogState extends State<BreathingDialog>
     final isInhaling = _controller.status == AnimationStatus.forward;
 
     return AlertDialog(
+      scrollable: true,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       backgroundColor: paper,
       contentPadding: const EdgeInsets.all(24),
@@ -1624,12 +1655,14 @@ class _BreathingDialogState extends State<BreathingDialog>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                _isCompleted ? 'Session Completed!' : 'Breathing with Unc',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: ink,
+              Expanded(
+                child: Text(
+                  _isCompleted ? 'Session Completed!' : 'Breathing with Unc',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: ink,
+                  ),
                 ),
               ),
               IconButton(
