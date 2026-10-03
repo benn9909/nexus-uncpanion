@@ -1,5 +1,5 @@
+import 'models/reminder.dart';
 import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 
 enum FocusPhase { setup, focus, shortBreak, longBreak }
@@ -57,7 +57,7 @@ class AppState extends ChangeNotifier {
     if (phase == FocusPhase.setup) {
       phase = FocusPhase.focus;
       session = 1;
-      _remaining = const Duration(minutes: 25);
+      _remaining = Duration(minutes: sessionFocusTime);
     } else if (running) {
       tick();
       if (phase == FocusPhase.setup) return;
@@ -77,28 +77,27 @@ class AppState extends ChangeNotifier {
     running = false;
     session = 1;
     _deadline = null;
-    _remaining = const Duration(minutes: 25);
+    _remaining = Duration(minutes: sessionFocusTime);
     notifyListeners();
   }
 
   void tick() {
     if (!running || _deadline == null) return;
-    // Catch up across suspended frames without losing elapsed time.
     while (running && !_clock().isBefore(_deadline!)) {
       final boundary = _deadline!;
       switch (phase) {
         case FocusPhase.focus:
-          records.insert(0, FocusRecord(boundary, 25));
+          records.insert(0, FocusRecord(boundary, sessionFocusTime));
           phase = session == selectedSessions
               ? FocusPhase.longBreak
               : FocusPhase.shortBreak;
           _remaining = Duration(
-            minutes: phase == FocusPhase.longBreak ? 15 : 5,
+            minutes: phase == FocusPhase.longBreak ? 15 : sessionBreakTime,
           );
         case FocusPhase.shortBreak:
           session++;
           phase = FocusPhase.focus;
-          _remaining = const Duration(minutes: 25);
+          _remaining = Duration(minutes: sessionFocusTime);
         case FocusPhase.longBreak:
           reset();
           return;
@@ -114,5 +113,59 @@ class AppState extends ChangeNotifier {
   void dispose() {
     _timer?.cancel();
     super.dispose();
+  }
+
+  int sessionFocusTime = 25;
+  int sessionBreakTime = 5;
+  
+  int currentBpm = 80; 
+  bool isLowActivity = true; 
+
+  // check if highstress (BPM higher than 100 & low activity)
+  bool get isHighStress => currentBpm >= 100 && isLowActivity;
+
+  //adjust timer for stress (15 min focus, 10 min break)
+  void adjustTimerForStress() {
+    sessionFocusTime = 15;
+    sessionBreakTime = 10;
+    
+  
+    if (phase == FocusPhase.setup) {
+      _remaining = Duration(minutes: sessionFocusTime);
+    }
+    notifyListeners();
+  }
+
+  // if stress returns to normal state, timer also returns to 25/5 session
+  void resetTimerIfRelaxed() {
+    if (!isHighStress) {
+      sessionFocusTime = 25;
+      sessionBreakTime = 5;
+      notifyListeners();
+    }
+  }
+
+  //reminder
+  List<Reminder> reminders = [];
+
+  void addReminder(String title, DateTime deadline) {
+    reminders.add(Reminder(title: title, deadline: deadline));
+    notifyListeners();
+  }
+
+  void toggleReminder(int index) {
+    reminders[index].isDone = !reminders[index].isDone;
+    notifyListeners();
+  }
+
+  // check if there are more than 5 urgent reminder in 3 days
+  bool get isOverloaded {
+    final now = DateTime.now();
+    int urgentCount = reminders.where((r) {
+      if (r.isDone) return false;
+      final daysLeft = r.deadline.difference(now).inDays;
+      return daysLeft >= 0 && daysLeft <= 3;
+    }).length;
+    return urgentCount >= 5;
   }
 }

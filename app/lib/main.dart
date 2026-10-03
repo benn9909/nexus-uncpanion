@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -326,6 +327,58 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int dialogue = 0;
+
+  void _showOverloadAndBreathingDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: const [
+            Icon(Icons.warning_amber_rounded, color: green),
+            SizedBox(width: 8),
+            Text('Task Overload Alert', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              'You have 5 or more tasks coming up! Take a moment to pause and avoid feeling overwhelmed.',
+              style: TextStyle(fontSize: 14, height: 1.4),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Would you like to take a 10-second breathing break with Unc?',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: green,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Not now'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => const BreathingDialog(),
+              );
+            },
+            child: const Text('Breathe with Unc'),
+          ),
+        ],
+      ),
+    );
+  } //int dialogue// @overrride 
   @override
   Widget build(BuildContext context) {
     final active = widget.state.phase != FocusPhase.setup;
@@ -427,6 +480,67 @@ class _HomePageState extends State<HomePage> {
                   label: Text(
                     active ? 'Return to your session' : 'Find your focus',
                   ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        SectionTitle(
+  'My To-Do List',
+  trailing: const Tooltip(
+    message: 'When you have too many upcoming tasks, Unc will alert you and help you pace yourself.',
+    triggerMode: TooltipTriggerMode.tap,
+    child: Icon(
+      Icons.help_outline_rounded,
+      size: 18,
+      color: muted,
+    ),
+  ),
+),
+        Panel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (widget.state.reminders.isEmpty)
+                const Text('No tasks added yet.', style: TextStyle(color: muted))
+              else
+                ...widget.state.reminders.asMap().entries.map((entry) {
+                  int idx = entry.key;
+                  var r = entry.value;
+                  return CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      r.title,
+                      style: TextStyle(
+                        decoration: r.isDone ? TextDecoration.lineThrough : null,
+                        color: r.isDone ? muted : ink,
+                      ),
+                    ),
+                    subtitle: Text('Due: ${r.deadline.month}/${r.deadline.day}'),
+                    value: r.isDone,
+                    onChanged: (bool? val) {
+                      widget.state.toggleReminder(idx);
+                    },
+                  );
+                }).toList(),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      widget.state.addReminder(
+                        'New task ${widget.state.reminders.length + 1}',
+                        DateTime.now().add(const Duration(days: 2)),
+                      );
+                    });
+                    if (widget.state.reminders.length >= 5) {
+                      _showOverloadAndBreathingDialog();
+                    }
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Task (Test)'),
                 ),
               ),
             ],
@@ -567,6 +681,7 @@ class FocusPage extends StatelessWidget {
   const FocusPage({super.key, required this.state, required this.watch});
   final AppState state;
   final WatchController watch;
+  
   @override
   Widget build(BuildContext context) {
     final setup = state.phase == FocusPhase.setup;
@@ -575,10 +690,19 @@ class FocusPage extends StatelessWidget {
         '${(seconds ~/ 60).toString().padLeft(2, '0')}:${(seconds % 60).toString().padLeft(2, '0')}';
     return PageBody(
       children: [
-        const PageTitle(
-          'One thing at a time.',
-          'A place to begin, pause, and begin again.',
-        ),
+        PageTitle(
+  'One thing at a time.',
+  'A place to begin, pause, and begin again.',
+  action: const Tooltip(
+    message: 'If high stress is detected, focus time automatically adjusts to 15 minutes with a 10-minute break.',
+    triggerMode: TooltipTriggerMode.tap,
+    child: Icon(
+      Icons.help_outline_rounded,
+      size: 20,
+      color: muted,
+    ),
+  ),
+),
         if (watch.hasConnected) WatchFocusPanel(watch: watch),
         const Row(
           children: [
@@ -1419,4 +1543,158 @@ class TrendPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant TrendPainter old) =>
       old.values != values || old.color != color;
+}
+class BreathingDialog extends StatefulWidget {
+  const BreathingDialog({super.key});
+
+  @override
+  State<BreathingDialog> createState() => _BreathingDialogState();
+}
+
+class _BreathingDialogState extends State<BreathingDialog>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+  late Timer _timer;
+  int _secondsLeft = 10;
+  bool _isCompleted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // 2.5초 들숨, 2.5초 날숨 (1회당 5초, 10초 동안 총 2회 세션)
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2500),
+    )..repeat(reverse: true);
+
+    _scaleAnimation = Tween<double>(begin: 0.88, end: 1.12).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return;
+      if (_secondsLeft > 1) {
+        setState(() {
+          _secondsLeft--;
+        });
+      } else {
+        t.cancel();
+        _controller.stop();
+        setState(() {
+          _secondsLeft = 0;
+          _isCompleted = true;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isInhaling = _controller.status == AnimationStatus.forward;
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      backgroundColor: paper,
+      contentPadding: const EdgeInsets.all(24),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+        
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _isCompleted ? 'Session Completed!' : 'Breathing with Unc',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: ink,
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close_rounded, color: ink),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // reminder unc breathing design
+          ScaleTransition(
+            scale: _scaleAnimation,
+            child: Container(
+              width: 130,
+              height: 110,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4FBCF),
+                borderRadius: BorderRadius.circular(34),
+                border: Border.all(color: ink, width: 3),
+                boxShadow: const [
+                  BoxShadow(color: Color(0xFFB7D180), offset: Offset(4, 6)),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                _isCompleted
+                    ? '^_^'
+                    : (isInhaling ? '^_^' : 'U_U'),
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 39,
+                  color: ink,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // texts when breathing
+          if (!_isCompleted) ...[
+            Text(
+              isInhaling ? 'Inhale slowly...' : 'Exhale gently...',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: green,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '$_secondsLeft seconds remaining',
+              style: const TextStyle(fontSize: 12, color: muted),
+            ),
+          ] else ...[
+            const Text(
+              'Great job taking a moment for yourself! 🌿',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: green,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Done'),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
