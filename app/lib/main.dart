@@ -337,7 +337,10 @@ class _HomePageState extends State<HomePage> {
           children: const [
             Icon(Icons.warning_amber_rounded, color: green),
             SizedBox(width: 8),
-            Text('Task Overload Alert', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              'Task Overload Alert',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
         content: Column(
@@ -345,7 +348,7 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: const [
             Text(
-              'You have 5 or more tasks coming up! Take a moment to pause and avoid feeling overwhelmed.',
+              'You have 5 or more unfinished tasks due in the next 3 days! Take a moment to pause and avoid feeling overwhelmed.',
               style: TextStyle(fontSize: 14, height: 1.4),
             ),
             SizedBox(height: 16),
@@ -378,7 +381,8 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
-  } //int dialogue// @overrride 
+  }
+
   @override
   Widget build(BuildContext context) {
     final active = widget.state.phase != FocusPhase.setup;
@@ -487,23 +491,23 @@ class _HomePageState extends State<HomePage> {
         ),
 
         SectionTitle(
-  'My To-Do List',
-  trailing: const Tooltip(
-    message: 'When you have too many upcoming tasks, Unc will alert you and help you pace yourself.',
-    triggerMode: TooltipTriggerMode.tap,
-    child: Icon(
-      Icons.help_outline_rounded,
-      size: 18,
-      color: muted,
-    ),
-  ),
-),
+          'My To-Do List',
+          trailing: const Tooltip(
+            message:
+                'When you have too many upcoming tasks, Unc will alert you and help you pace yourself.',
+            triggerMode: TooltipTriggerMode.tap,
+            child: Icon(Icons.help_outline_rounded, size: 18, color: muted),
+          ),
+        ),
         Panel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (widget.state.reminders.isEmpty)
-                const Text('No tasks added yet.', style: TextStyle(color: muted))
+                const Text(
+                  'No tasks added yet.',
+                  style: TextStyle(color: muted),
+                )
               else
                 ...widget.state.reminders.asMap().entries.map((entry) {
                   int idx = entry.key;
@@ -513,11 +517,15 @@ class _HomePageState extends State<HomePage> {
                     title: Text(
                       r.title,
                       style: TextStyle(
-                        decoration: r.isDone ? TextDecoration.lineThrough : null,
+                        decoration: r.isDone
+                            ? TextDecoration.lineThrough
+                            : null,
                         color: r.isDone ? muted : ink,
                       ),
                     ),
-                    subtitle: Text('Due: ${r.deadline.month}/${r.deadline.day}'),
+                    subtitle: Text(
+                      'Due: ${r.deadline.month}/${r.deadline.day}',
+                    ),
                     value: r.isDone,
                     onChanged: (bool? val) {
                       widget.state.toggleReminder(idx);
@@ -529,13 +537,12 @@ class _HomePageState extends State<HomePage> {
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    setState(() {
-                      widget.state.addReminder(
-                        'New task ${widget.state.reminders.length + 1}',
-                        DateTime.now().add(const Duration(days: 2)),
-                      );
-                    });
-                    if (widget.state.reminders.length >= 5) {
+                    final wasOverloaded = widget.state.isOverloaded;
+                    widget.state.addReminder(
+                      'New task ${widget.state.reminders.length + 1}',
+                      DateTime.now().add(const Duration(days: 2)),
+                    );
+                    if (!wasOverloaded && widget.state.isOverloaded) {
                       _showOverloadAndBreathingDialog();
                     }
                   },
@@ -681,7 +688,7 @@ class FocusPage extends StatelessWidget {
   const FocusPage({super.key, required this.state, required this.watch});
   final AppState state;
   final WatchController watch;
-  
+
   @override
   Widget build(BuildContext context) {
     final setup = state.phase == FocusPhase.setup;
@@ -691,18 +698,15 @@ class FocusPage extends StatelessWidget {
     return PageBody(
       children: [
         PageTitle(
-  'One thing at a time.',
-  'A place to begin, pause, and begin again.',
-  action: const Tooltip(
-    message: 'If high stress is detected, focus time automatically adjusts to 15 minutes with a 10-minute break.',
-    triggerMode: TooltipTriggerMode.tap,
-    child: Icon(
-      Icons.help_outline_rounded,
-      size: 20,
-      color: muted,
-    ),
-  ),
-),
+          'One thing at a time.',
+          'A place to begin, pause, and begin again.',
+          action: const Tooltip(
+            message:
+                'Focus for 25 minutes, then take a 5-minute break. Your final break lasts 15 minutes. The app timer runs independently of the watch.',
+            triggerMode: TooltipTriggerMode.tap,
+            child: Icon(Icons.help_outline_rounded, size: 20, color: muted),
+          ),
+        ),
         if (watch.hasConnected) WatchFocusPanel(watch: watch),
         const Row(
           children: [
@@ -1544,6 +1548,7 @@ class TrendPainter extends CustomPainter {
   bool shouldRepaint(covariant TrendPainter old) =>
       old.values != values || old.color != color;
 }
+
 class BreathingDialog extends StatefulWidget {
   const BreathingDialog({super.key});
 
@@ -1562,15 +1567,19 @@ class _BreathingDialogState extends State<BreathingDialog>
   @override
   void initState() {
     super.initState();
-    // 2.5초 들숨, 2.5초 날숨 (1회당 5초, 10초 동안 총 2회 세션)
+    // Two cycles: 2.5 seconds inhaling, then 2.5 seconds exhaling.
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2500),
-    )..repeat(reverse: true);
-
-    _scaleAnimation = Tween<double>(begin: 0.88, end: 1.12).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
+
+    _scaleAnimation = Tween<double>(
+      begin: 0.88,
+      end: 1.12,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
+    _controller.addStatusListener(_onBreathingDirectionChanged);
+    _controller.repeat(reverse: true);
 
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) return;
@@ -1589,8 +1598,13 @@ class _BreathingDialogState extends State<BreathingDialog>
     });
   }
 
+  void _onBreathingDirectionChanged(AnimationStatus status) {
+    if (mounted && !_isCompleted) setState(() {});
+  }
+
   @override
   void dispose() {
+    _controller.removeStatusListener(_onBreathingDirectionChanged);
     _controller.dispose();
     _timer.cancel();
     super.dispose();
@@ -1607,7 +1621,6 @@ class _BreathingDialogState extends State<BreathingDialog>
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-        
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -1645,9 +1658,7 @@ class _BreathingDialogState extends State<BreathingDialog>
               ),
               alignment: Alignment.center,
               child: Text(
-                _isCompleted
-                    ? '^_^'
-                    : (isInhaling ? '^_^' : 'U_U'),
+                _isCompleted ? '^_^' : (isInhaling ? '^_^' : 'U_U'),
                 style: const TextStyle(
                   fontFamily: 'monospace',
                   fontWeight: FontWeight.bold,
