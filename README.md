@@ -11,8 +11,8 @@ NEXUS is a hardware-first student productivity and wellness wearable built aroun
 - ESP32 firmware compiles and has been uploaded to the connected watch.
 - The watch advertises a read-only BLE telemetry service named **Uncpanion Watch**.
 - The Flutter web preview has connected to the physical watch and displayed live sensor data.
-- Flutter automated checks: **10 passing**.
-- The phone-native Android and iOS builds have not yet been validated.
+- Flutter automated checks: **18 passing**; analysis reports no issues (4 October 2026).
+- The native iOS release has been built, installed, and opened on an iPhone. Android remains unverified.
 
 ## Features
 
@@ -101,7 +101,7 @@ Before the Round 2 deadline, the team must also submit the organizer's official 
 - No account, backend, cloud upload, AI feature, or medical interpretation is included.
 - The app focus timer is independent of the watch focus timer.
 - The watch activity target measures detected movement time; it is not a medical activity measure or step counter.
-- Android/iOS packaging, signing, and physical native-device testing remain future work.
+- Android packaging and native BLE hardware checks remain future work. iOS installation instructions are in `app/docs/ios-device-setup.md`.
 
 ## Supporting notes
 

@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import 'models/reminder.dart';
+
 enum FocusPhase { setup, focus, shortBreak, longBreak }
 
 class FocusRecord {
@@ -83,7 +85,6 @@ class AppState extends ChangeNotifier {
 
   void tick() {
     if (!running || _deadline == null) return;
-    // Catch up across suspended frames without losing elapsed time.
     while (running && !_clock().isBefore(_deadline!)) {
       final boundary = _deadline!;
       switch (phase) {
@@ -114,5 +115,28 @@ class AppState extends ChangeNotifier {
   void dispose() {
     _timer?.cancel();
     super.dispose();
+  }
+
+  final List<Reminder> reminders = [];
+
+  void addReminder(String title, DateTime deadline) {
+    reminders.add(Reminder(title: title, deadline: deadline));
+    notifyListeners();
+  }
+
+  void toggleReminder(int index) {
+    reminders[index].isDone = !reminders[index].isDone;
+    notifyListeners();
+  }
+
+  // Count unfinished reminders due from now through the next 72 hours.
+  bool get isOverloaded {
+    final now = _clock();
+    final cutoff = now.add(const Duration(days: 3));
+    final urgentCount = reminders.where((r) {
+      if (r.isDone) return false;
+      return !r.deadline.isBefore(now) && !r.deadline.isAfter(cutoff);
+    }).length;
+    return urgentCount >= 5;
   }
 }
